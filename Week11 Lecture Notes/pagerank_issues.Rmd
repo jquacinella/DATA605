@@ -1,0 +1,113 @@
+---
+title: "PageRank"
+author: "James Quacinella"
+date: "April 19, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Transition Matrix
+
+```{r cars}
+n <- 6
+A <- matrix(c(0,.5,.5,0,0,0,
+              1/6,1/6,1/6,1/6,1/6,1/6,
+              1/3,1/3,0,0,1/3,0,
+              0,0,0,0,.5,.5,
+              0,0,0,.5,0,.5,
+              0,0,0,1,0,0), byrow=T, nrow=n)
+A
+```
+
+Lets confirm the rows add to 1:
+
+```{r}
+rowSums(A)
+```
+
+Lets update our matrix with a decay matrix as per the notes:
+
+```{r}
+d <- 0.85
+
+B <- d*A + ((1-d) / n)
+B
+```
+
+
+Lets create a page rank vector, which represents probabilities:
+
+```{r}
+r <- rep(1/n, n) 
+r
+```
+
+Lets do one iteration:
+
+```{r}
+r_new <- B %*% r
+r_new
+```
+
+
+Wait ... why didn't r change?? If you think about how B is constructed with it rows summing to 1, then r via multiplication never changes! In order to see any changes in R, I had to swap the matrix multiplcaition order:
+
+
+```{r}
+r_new <- r %*% B
+r_new
+```
+
+Lets do this repeatedly and find the page rank vector:
+
+
+```{r}
+library(expm) 
+r_final <- r %*% ( B %^% 30 ) 
+r_final
+```
+
+
+## Eigenvector Method
+
+Lets try to solve this using eigenvectors:
+
+```{r}
+eigen(B)
+```
+
+
+Uh oh, the eigenvector with eigenvalue 1 doesn't look right at all! One thing to notice is that our method above is using matrix B in a way thats NOT an eigenvector problem. We need to do some math to switch the order of the terms:
+
+$$ r = r * B $$
+$$ r^T = (r * B)^T $$
+$$ r^T = B^T * r^T $$
+
+Hence, it seems like we need to look at eigenvectors of the transpose of this matrix:
+
+```{r}
+eigens <- eigen( t(B) )
+eigens
+```
+
+
+```{r}
+r_final_eigen <- eigens$vectors[,1]
+r_final_eigen
+```
+
+Issue here is that this is not a pagerank vector since it does not represent probabilities that sum to 1. If r_final_eigen is a eigenvector solution to the equation, then so is any scalar multiple of it. We need to scale this eigen vector such that the components add to 1. NOTE: this is not 'normalizing' a vector
+
+```{r}
+r_final - r_final_eigen / sum(r_final_eigen)
+```
+
+
+
+```{r}
+r_final_eigen <- r_final_eigen / sum(r_final_eigen)
+r_final_eigen
+```
